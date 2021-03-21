@@ -77,29 +77,44 @@ leaflet(data = coord,
   addMarkers(~latitude, ~longitude)
 ```
 
-
 ```{r}
-#sensor <- sensor %>%
- # rename("datetime" = "Date Time") 
-
-class(sensor$datetime)
-
-#sensor$datetime <- as.Date(sensor$datetime, format = "%m-%d-%Y-%I")
-
-sensor <- sensor %>%
-  rename("datetime" = "Date Time") %>%
-  as.Date(datetime)
-
+#Filter chemical that is the most harmful and has highest reading levels
+sd1 <- filter(sensor, Chemical == "Methylosmolene")
+# Which monitor read Methylosmolene the most?
+sd1$Monitor <- as.factor(sd1$Monitor) #make "Monitor" categorical
+ggplot(data = sd1, mapping = aes(x = Monitor, y= Reading)) +
+  geom_col()
 ```
+
 ```{r}
+
 library(lubridate)
-sensor_ag <- sensor %>%
-  mutate(datetime1 = floor_date(ymd_hms(datetime), "month")) 
-  #summarise(total_reading = sum(Reading))
+library(stringr)
+rm(sensor2, meteorological2, M)
+
+sensor2 <- sensor %>%
+  rename("datetime" = "Date Time") %>%
+  separate(datetime, c("date", "time"), sep = " ")
+
+meteorological2 <- meteorological %>%
+  separate(Date, c("date", "time"), sep = " ") %>%
+  inner_join(sensor2, by = "date")
+
+M <- meteorological2 %>%
+  filter(Chemical == 'Methylosmolene') %>%
+  filter(Monitor == 3 | Monitor == 4 | Monitor == 6)
+
+
+
+# mutate(datetime1 = floor_date(ymd_hms(datetime), "month"))
 
 ```
+
 ```{r}
-sensor_time_plot <- ggplot(data = sensor, aes(datetime, Reading)) +
+sensor3 <- sensor %>%
+  filter(Chemical == 'Methylosmolene')
+
+sensor_time_plot <- ggplot(data = sensor, aes(`Date Time`, Reading)) +
     geom_point() +
   facet_wrap(vars(Monitor), scales = "free") 
 
@@ -108,7 +123,7 @@ sensor_time_plot
 ```
 
 ```{r}
-chemical_plot <- ggplot(data = sensor, aes())
+
 
 ```
 
