@@ -1,0 +1,114 @@
+---
+title: "corrina1"
+author: "Corrina Pascale"
+date: "3/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(leaflet)
+library(dplyr)
+```
+
+```{r}
+meteorological <- read_csv("Data/Meteorological Data.csv")
+sensor <- read_csv("Data/Sensor Data.csv")
+traffic <- read_csv("Data/Lekagul Sensor Data.csv")
+# factory and chemical sensor coordinates:
+coord <- read_csv('Data/coordinates.csv')
+
+roadways <- readJPEG('Lekagul Roadways labeled v2.jpg') 
+
+
+```
+
+
+```{r}
+m <- coord %>%
+  leaflet() %>%
+  setView(200, 200, zoom = 1) %>%
+  addMarkers(lng=coord$longitude, lat=coord$latitude, popup=coord$item)
+m
+```
+```{r}
+m2 <- leaflet(data = coord,
+        height=400,
+        width=400,
+        options = leafletOptions(crs = leafletCRS('L.CRS.Simple'))) %>% 
+        setView(200, 200, zoom = -1) %>%
+  addMarkers(~longitude, ~latitude, popup=~item)
+m2
+```
+
+
+
+
+```{r does not work }
+require(magick) # image loading
+require(htmlwidgets) # render JS function
+library(tidyverse)
+library(leaflet)
+
+#roadways <- knitr::image_uri('Lekagul Roadways labeled v2.jpg') 
+# roadways <- read.delim('base64.txt')
+roadways <- base64Encode('Lekagul Roadways labeled v2.jpg')
+imageURL <- 'file:///Users/corrinapascale/Desktop/DC3/Lekagul%20Roadways%20labeled%20v2.jpg'
+# get image data. we'll use this to set the image size
+imageData <- 
+    image_read(imageURL) %>% image_info()
+
+leaflet(data = coord,
+        height=400,
+        width=400,
+        options = leafletOptions(crs = leafletCRS('L.CRS.Simple'))) %>% 
+        setView(200, 200, zoom = -1) %>%
+        onRender(glue::glue("
+      function(el, x) {
+        var myMap = this;
+        var imageUrl = '<roadways>';
+        var imageBounds = [[<0>,<0>], [<imageData$height>,<imageData$width>]];
+        L.imageOverlay(roadways, imageBounds).addTo(myMap);
+      }
+      ",.open = '<', .close = '>')) %>% 
+  addMarkers(~latitude, ~longitude)
+```
+
+
+```{r}
+#sensor <- sensor %>%
+ # rename("datetime" = "Date Time") 
+
+class(sensor$datetime)
+
+#sensor$datetime <- as.Date(sensor$datetime, format = "%m-%d-%Y-%I")
+
+sensor <- sensor %>%
+  rename("datetime" = "Date Time") %>%
+  as.Date(datetime)
+
+```
+```{r}
+library(lubridate)
+sensor_ag <- sensor %>%
+  mutate(datetime1 = floor_date(ymd_hms(datetime), "month")) 
+  #summarise(total_reading = sum(Reading))
+
+```
+```{r}
+sensor_time_plot <- ggplot(data = sensor, aes(datetime, Reading)) +
+    geom_point() +
+  facet_wrap(vars(Monitor), scales = "free") 
+
+sensor_time_plot
+
+```
+
+```{r}
+chemical_plot <- ggplot(data = sensor, aes())
+
+```
+
