@@ -53,13 +53,16 @@ require(htmlwidgets) # render JS function
 library(tidyverse)
 library(leaflet)
 
-#roadways <- knitr::image_uri('Lekagul Roadways labeled v2.jpg') 
-# roadways <- read.delim('base64.txt')
-roadways <- base64Encode('Lekagul Roadways labeled v2.jpg')
-imageURL <- 'file:///Users/corrinapascale/Desktop/DC3/Lekagul%20Roadways%20labeled%20v2.jpg'
-# get image data. we'll use this to set the image size
+# tried unsuccessfully with these other 2 methods : 
+
+#roadways <- base64Encode('Lekagul Roadways labeled v2.jpg')
+#imageURL <- 'file:///Users/corrinapascale/Desktop/DC3/Lekagul%20Roadways%20labeled%20v2.jpg'
+
+b64img <- knitr::image_uri('Lekagul Roadways labeled v2.jpg')
+roadways2 <- 'Lekagul Roadways labeled v2.jpg'
+
 imageData <- 
-    image_read(imageURL) %>% image_info()
+    image_read(roadways2) %>% image_info()
 
 leaflet(data = coord,
         height=400,
@@ -69,12 +72,12 @@ leaflet(data = coord,
         onRender(glue::glue("
       function(el, x) {
         var myMap = this;
-        var imageUrl = '<roadways>';
+        var imageUrl = '<roadways2>';
         var imageBounds = [[<0>,<0>], [<imageData$height>,<imageData$width>]];
-        L.imageOverlay(roadways, imageBounds).addTo(myMap);
+        L.imageOverlay(roadways2, imageBounds).addTo(myMap);
       }
       ",.open = '<', .close = '>')) %>% 
-  addMarkers(~latitude, ~longitude)
+  addMarkers(~latitude, ~longitude, popup=~item)
 ```
 
 ```{r}
@@ -87,6 +90,7 @@ ggplot(data = sd1, mapping = aes(x = Monitor, y= Reading)) +
 ```
 
 ```{r}
+# wrangling sensor & wind data
 
 library(lubridate)
 library(stringr)
@@ -104,16 +108,19 @@ M <- meteorological2 %>%
   filter(Chemical == 'Methylosmolene') %>%
   filter(Monitor == 3 | Monitor == 4 | Monitor == 6)
 
+```
+```{r}
+class(sensor2$date)
 
-
-# mutate(datetime1 = floor_date(ymd_hms(datetime), "month"))
+sensor_ag <- sensor2 %>%
+  mutate(date = as.Date(date)) 
+  # mutate(date_ag = floor_date(ymd_hms(date), "month"))
+class(sensor2$date)
 
 ```
 
-```{r}
-sensor3 <- sensor %>%
-  filter(Chemical == 'Methylosmolene')
 
+```{r}
 sensor_time_plot <- ggplot(data = sensor, aes(`Date Time`, Reading)) +
     geom_point() +
   facet_wrap(vars(Monitor), scales = "free") 
