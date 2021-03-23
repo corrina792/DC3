@@ -15,15 +15,11 @@ library(dplyr)
 ```
 
 ```{r}
-meteorological <- read_csv("Data/Meteorological Data.csv")
-sensor <- read_csv("Data/Sensor Data.csv")
-traffic <- read_csv("Data/Lekagul Sensor Data.csv")
+meteorological <- Meteorological_Data
+sensor <- Sensor_Data
+traffic <- Lekagul_Sensor_Data
 # factory and chemical sensor coordinates:
-coord <- read_csv('Data/coordinates.csv')
-
-roadways <- readJPEG('Lekagul Roadways labeled v2.jpg') 
-
-
+coord <- coordinates
 ```
 
 
@@ -52,18 +48,13 @@ require(magick) # image loading
 require(htmlwidgets) # render JS function
 library(tidyverse)
 library(leaflet)
-
 # tried unsuccessfully with these other 2 methods : 
-
 #roadways <- base64Encode('Lekagul Roadways labeled v2.jpg')
 #imageURL <- 'file:///Users/corrinapascale/Desktop/DC3/Lekagul%20Roadways%20labeled%20v2.jpg'
-
 b64img <- knitr::image_uri('Lekagul Roadways labeled v2.jpg')
 roadways2 <- 'Lekagul Roadways labeled v2.jpg'
-
 imageData <- 
     image_read(roadways2) %>% image_info()
-
 leaflet(data = coord,
         height=400,
         width=400,
@@ -91,31 +82,24 @@ ggplot(data = sd1, mapping = aes(x = Monitor, y= Reading)) +
 
 ```{r}
 # wrangling sensor & wind data
-
 library(lubridate)
 library(stringr)
 rm(sensor2, meteorological2, M)
-
 sensor2 <- sensor %>%
   rename("datetime" = "Date Time") %>%
   separate(datetime, c("date", "time"), sep = " ")
-
 meteorological2 <- meteorological %>%
   separate(Date, c("date", "time"), sep = " ") %>%
   inner_join(sensor2, by = "date")
-
 M <- meteorological2 %>%
   filter(Chemical == 'Methylosmolene') %>%
   filter(Monitor == 3 | Monitor == 4 | Monitor == 6)
-
 ```
 ```{r}
-class(sensor2$date)
 
 sensor_ag <- sensor2 %>%
-  mutate(date = as.Date(date)) 
-  # mutate(date_ag = floor_date(ymd_hms(date), "month"))
-class(sensor2$date)
+  mutate(Timestamp = as.POSIXct(date, format = "%d/%m/%Y")) %>%
+  separate("date", c("Year", "Month", "Day"), sep = "-")
 
 ```
 
@@ -124,13 +108,8 @@ class(sensor2$date)
 sensor_time_plot <- ggplot(data = sensor, aes(`Date Time`, Reading)) +
     geom_point() +
   facet_wrap(vars(Monitor), scales = "free") 
-
 sensor_time_plot
-
 ```
 
 ```{r}
-
-
 ```
-
