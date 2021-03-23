@@ -15,11 +15,11 @@ library(dplyr)
 ```
 
 ```{r}
-meteorological <- Meteorological_Data
-sensor <- Sensor_Data
-traffic <- Lekagul_Sensor_Data
+meteorological <- read.csv("Data/Meteorological Data.csv")
+sensor <- read.csv("Data/Sensor Data.csv")
+traffic <- read.csv("Data/Lekagul Sensor Data.csv")
 # factory and chemical sensor coordinates:
-coord <- coordinates
+coord <- read.csv("Data/coordinates.csv")
 ```
 
 
@@ -41,6 +41,11 @@ m2
 ```
 
 
+```{r}
+coord2 <- coord %>%
+  mutate(latitude = latitude * 3.5) %>%
+  mutate(longitude = longitude * 3.5)
+```
 
 
 ```{r does not work }
@@ -48,27 +53,28 @@ require(magick) # image loading
 require(htmlwidgets) # render JS function
 library(tidyverse)
 library(leaflet)
-# tried unsuccessfully with these other 2 methods : 
-#roadways <- base64Encode('Lekagul Roadways labeled v2.jpg')
-#imageURL <- 'file:///Users/corrinapascale/Desktop/DC3/Lekagul%20Roadways%20labeled%20v2.jpg'
-b64img <- knitr::image_uri('Lekagul Roadways labeled v2.jpg')
-roadways2 <- 'Lekagul Roadways labeled v2.jpg'
-imageData <- 
-    image_read(roadways2) %>% image_info()
-leaflet(data = coord,
-        height=400,
-        width=400,
-        options = leafletOptions(crs = leafletCRS('L.CRS.Simple'))) %>% 
-        setView(200, 200, zoom = -1) %>%
+
+imageURL <- 'MapLargeLabels.jpg'
+b64img <- knitr::image_uri(imageURL)
+
+imageData <- image_read(imageURL) %>% image_info()
+
+leaflet(data = coord2,
+        height=600,
+        width=600,
+        options = leafletOptions(crs = leafletCRS('L.CRS.Simple'))) %>%
+        setView(600, 600, zoom = -1) %>%
         onRender(glue::glue("
       function(el, x) {
         var myMap = this;
-        var imageUrl = '<roadways2>';
+        var b64img = '<b64img>';
         var imageBounds = [[<0>,<0>], [<imageData$height>,<imageData$width>]];
-        L.imageOverlay(roadways2, imageBounds).addTo(myMap);
+        L.imageOverlay(b64img, imageBounds).addTo(myMap)
       }
-      ",.open = '<', .close = '>')) %>% 
-  addMarkers(~latitude, ~longitude, popup=~item)
+      ",.open = '<', .close = '>')) %>%
+  addCircles(~latitude, ~longitude, popup=~item)
+
+
 ```
 
 ```{r}
@@ -84,9 +90,11 @@ ggplot(data = sd1, mapping = aes(x = Monitor, y= Reading)) +
 # wrangling sensor & wind data
 library(lubridate)
 library(stringr)
-rm(sensor2, meteorological2, M)
+
+class(sensor$`Date.Time`)
+
 sensor2 <- sensor %>%
-  rename("datetime" = "Date Time") %>%
+  rename("datetime" = "Date.Time") %>%
   separate(datetime, c("date", "time"), sep = " ")
 meteorological2 <- meteorological %>%
   separate(Date, c("date", "time"), sep = " ") %>%
@@ -95,23 +103,78 @@ M <- meteorological2 %>%
   filter(Chemical == 'Methylosmolene') %>%
   filter(Monitor == 3 | Monitor == 4 | Monitor == 6)
 ```
-```{r}
+
+```{r bar plot}
+#Filter chemical that is the most harmful and has highest reading levels
+sd1 <- filter(sensor, Chemical == "Methylosmolene")
+# Which monitor read Methylosmolene the most?
+sd1$Monitor <- as.factor(sd1$Monitor) #make "Monitor" categorical
+ggplot(data = sd1, mapping = aes(x = Monitor, y= Reading)) +
+  geom_col()
+```
+
+```{r, echo=FALSE}
+# aggregating sensor data by day 
 
 sensor_ag <- sensor2 %>%
-  mutate(Timestamp = as.POSIXct(date, format = "%d/%m/%Y")) %>%
-  separate("date", c("Year", "Month", "Day"), sep = "-")
+  mutate(Timestamp = as.POSIXct(date, format = "%m/%d/%Y")) %>%
+  separate("Timestamp", c("Year", "Month", "Day"), sep = "-") %>%
+  group_by(Day, Month, Monitor) %>%
+  summarize(readings_total = sum(Reading)) %>%
+  mutate(date = paste(Month, "-", Day))
 
-class(sensor$`Date Time`)
 
 ```
 
 
-```{r}
-sensor_time_plot <- ggplot(data = sensor, aes(`Date Time`, Reading)) +
+```{r facet plot for sensors}
+# currently aggregated by date
+
+sensor_time_plot <- ggplot(data = sensor_ag, aes(date, readings_total)) +
     geom_point() +
-  facet_wrap(vars(Monitor), scales = "free") 
+  facet_wrap(vars(Monitor)) +
+  scale_x_discrete(breaks = c("04 - 01", "08 - 01", "12 - 01"), labels = c("Apr 1", "Aug 1", "Dec 1"))
 sensor_time_plot
 ```
 
 ```{r}
+library(plotly)
+
+steps <- list(
+  list(args = list("marker.color", "red"), 
+                    label = "Red", 
+                    method = "restyle", 
+                    value = "1"
+                    ),
+  list(args = list("marker.color", "green"), 
+                    label = "Green", 
+                    method = "restyle", 
+                    value = "2"
+                    ),
+  list(args = list("marker.color", "blue"), 
+                    label = "Blue", 
+                    method = "restyle", 
+                    value = "3"
+                    )
+  )
+
+fig<- meteorological2 
+fig <- fig %>% plot_ly(x = ~date, y = ~Wind.Direction,
+          mode = "markers", 
+          marker = list(size = 20,
+                        color = 'green'), 
+          type = "scatter") 
+fig <- fig %>% layout(title = "Basic Slider",
+         sliders = list(
+           list(
+             active = 1, 
+             currentvalue = list(prefix = "Color: "), 
+             pad = list(t = 60), 
+             steps = steps))) 
+
+fig
+
 ```
+
+
+
