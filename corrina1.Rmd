@@ -117,6 +117,8 @@ sensor_ag <- sensor2 %>%
   # mutate(date_ag = floor_date(ymd_hms(date), "month"))
 class(sensor2$date)
 
+class(sensor$`Date Time`)
+
 ```
 
 
